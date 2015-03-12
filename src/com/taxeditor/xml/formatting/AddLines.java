@@ -16,13 +16,16 @@ public class AddLines {
 
         System.setProperty("file.encoding", "windows-1251");
 
-        try(BufferedReader br = new BufferedReader(new FileReader(new File(fileName)))) {
+        try {
+
+            BufferedReader br = new BufferedReader(new FileReader(new File(fileName)));
+
             for(String line; (line = br.readLine()) != null; ) {
-
-
                 System.out.println(line);
             }
             // line is not visible here.
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
