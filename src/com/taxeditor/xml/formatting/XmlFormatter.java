@@ -7,8 +7,15 @@ import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,33 +31,25 @@ import java.nio.file.Paths;
  */
 public class XmlFormatter {
 
-    public String format(String xml) {
-
+    public static String prettyFormat(String input, int indent) {
         try {
-            final InputSource src = new InputSource(new StringReader(xml));
-            src.setEncoding("windows-1251");
-            final Node document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src).getDocumentElement();
-            final Boolean keepDeclaration = Boolean.valueOf(xml.startsWith("<?xml"));
-
-            //May need this:
-            //System.setProperty(DOMImplementationRegistry.PROPERTY,"com.sun.org.apache.xerces.internal.dom.DOMImplementationSourceImpl");
-
-
-            final DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
-            final DOMImplementationLS impl = (DOMImplementationLS) registry.getDOMImplementation("LS");
-            final LSSerializer writer = impl.createLSSerializer();
-
-            writer.getDomConfig().setParameter("format-pretty-print", Boolean.TRUE); // Set this to true if the output needs to be beautified.
-       //     writer.getDomConfig().setParameter("xml-declaration", keepDeclaration); // Set this to true if the declaration is needed to be outputted.
-
-            return writer.writeToString(document);
+            Source xmlInput = new StreamSource(new StringReader(input));
+            StringWriter stringWriter = new StringWriter();
+            StreamResult xmlOutput = new StreamResult(stringWriter);
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            transformerFactory.setAttribute("indent-number", indent);
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.transform(xmlInput, xmlOutput);
+            return "<?xml version=\"1.0\" encoding=\"windows-1251\"?>" + System.getProperty("line.separator") + xmlOutput.getWriter().toString();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e); // simple exception handling, please review it
         }
     }
 
-    public String ownFormat(String xml) {
-            return xml.replaceAll(">", ">\n");
+    public static String prettyFormat(String input) {
+        return prettyFormat(input, 2);
     }
 
     static String readFile(String path, Charset encoding) throws IOException
@@ -61,12 +60,27 @@ public class XmlFormatter {
 
     static void writeFile(String path, String content) throws IOException
     {
-        Files.write(Paths.get(path), content.getBytes(Charset.forName("Cp1251")));
+        Files.write(Paths.get(path), content.getBytes(Charset.forName("windows-1251")));
     }
 
+    static void formatFile(String fileName) throws IOException {
+        String[] formattedLines = prettyFormat(readFile(fileName, Charset.forName("windows-1251"))).split(System.getProperty("line.separator"));
+
+        String outputContent ="";
+        for (String line : formattedLines) {
+            if (line.indexOf("RXXXXG4S")!=-1) {
+                int idx = AddLines.getNumberFromLine(line);
+                line += System.getProperty("line.separator") + "<RXXXXG105_2S ROWNUM=\""+idx+"\">2009</RXXXXG105_2S>";
+            }
+
+            outputContent+=line;
+        }
+
+        writeFile(fileName, prettyFormat(outputContent));
+
+    }
 
     public static void main(String[] args) throws IOException {
-       writeFile("./sources/before_fomatted.xml", new XmlFormatter().format(readFile("./sources/before.xml", Charset.forName("Cp1251"))));
-      // System.out.println(new XmlFormatter().ownFormat(readFile("./sources/before.xml", Charset.forName("windows-1251"))));
+        formatFile("./sources/before_fomatted.xml");
     }
 }
