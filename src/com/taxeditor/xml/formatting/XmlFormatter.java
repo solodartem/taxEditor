@@ -81,6 +81,6 @@ public class XmlFormatter {
     }
 
     public static void main(String[] args) throws IOException {
-        formatFile("./sources/before_fomatted.xml");
+        //formatFile("./sources/before_fomatted.xml");
     }
 }
